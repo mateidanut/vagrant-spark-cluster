@@ -1,0 +1,33 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/focal64"
+  num_vms = 1
+
+  (1..num_vms).each do |vm_number|
+    config.vm.define "node#{vm_number}" do |node|
+      node.vm.hostname = "node#{vm_number}"
+      node.vm.network "private_network", type: "static", ip: "192.168.56.#{8 + vm_number}"
+
+      # Specify VM settings
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = 2048  # 2GB of RAM 
+        vb.cpus = 4      # 4 CPU cores
+      end 
+
+      # Copy script files from the host to the VM
+      node.vm.provision "file", source: "provision_scripts", destination: "/home/vagrant"
+
+      # Provision the VM using a shell script
+      node.vm.provision "shell", inline: <<-SHELL
+        echo "Running scripts on node#{vm_number}"
+        cd /home/vagrant
+        echo "HERE IS"
+        ls
+        for script in *.sh; do
+        echo "CHECK $script"
+            sudo chmod +x ./$script
+            ./$script
+        done
+      SHELL
+    end 
+  end 
+end
