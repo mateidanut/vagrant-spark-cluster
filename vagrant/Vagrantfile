@@ -1,33 +1,36 @@
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/focal64"
-  num_vms = 1
+  config.vm.box = "bento/ubuntu-22.04"
+config.vm.synced_folder "shared", "/vagrant/shared"
+  num_vms = 2 
 
+  # Create VM definitions
+  vm_definitions = []
   (1..num_vms).each do |vm_number|
-    config.vm.define "node#{vm_number}" do |node|
-      node.vm.hostname = "node#{vm_number}"
-      node.vm.network "private_network", type: "static", ip: "192.168.56.#{8 + vm_number}"
+    vm_definitions << {
+      name: "node#{vm_number}",
+      hostname: "node#{vm_number}",
+      ip: "192.168.56.#{8 + vm_number}",
+      cpus: 4,
+      memory: 2048
+    }
+  end
+
+  # Define VMs
+  vm_definitions.each do |vm_def|
+    config.vm.define vm_def[:name] do |node|
+      node.vm.hostname = vm_def[:hostname]
+      node.vm.network "private_network", type: "static", ip: vm_def[:ip]
+      node.ssh.forward_agent = true
+
 
       # Specify VM settings
       node.vm.provider "virtualbox" do |vb|
-        vb.memory = 2048  # 2GB of RAM 
-        vb.cpus = 4      # 4 CPU cores
+        vb.memory = vm_def[:memory]
+        vb.cpus = vm_def[:cpus]
       end 
 
-      # Copy script files from the host to the VM
-      node.vm.provision "file", source: "provision_scripts", destination: "/home/vagrant"
 
-      # Provision the VM using a shell script
-      node.vm.provision "shell", inline: <<-SHELL
-        echo "Running scripts on node#{vm_number}"
-        cd /home/vagrant
-        echo "HERE IS"
-        ls
-        for script in *.sh; do
-        echo "CHECK $script"
-            sudo chmod +x ./$script
-            ./$script
-        done
-      SHELL
     end 
   end 
+
 end
